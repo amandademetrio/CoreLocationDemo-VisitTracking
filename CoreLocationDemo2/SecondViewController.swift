@@ -7,12 +7,16 @@
 //
 
 import UIKit
+import MapKit
 
 class SecondViewController: UIViewController {
-
+    
+    @IBOutlet weak var mapView: MKMapView!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+        //From documentation: "causes the map view to center the map on that location and begin tracking the user’s location. If the map is zoomed out, the map view automatically zooms in on the user’s location, effectively changing the current visible region"
+        mapView.userTrackingMode = .follow
     }
 
     override func didReceiveMemoryWarning() {

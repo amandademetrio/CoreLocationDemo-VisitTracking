@@ -7,15 +7,29 @@
 //
 
 import UIKit
+import CoreLocation
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
 
+    let center = UNUserNotificationCenter.current()
+    let locationManager = CLLocationManager()
+    
+    //Object Used to transform lat, long into address
+    static let geoCoder = CLGeocoder()
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        //Asks the user to send them notifications
+        center.requestAuthorization(options: [.alert, .sound]) { granted, error in
+        }
+        //Asks the user to access their location
+        locationManager.requestAlwaysAuthorization()
+        //Starts listening for the user's location
+        locationManager.startMonitoringVisits()
+        locationManager.delegate = self
         return true
     }
 
@@ -40,7 +54,39 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func applicationWillTerminate(_ application: UIApplication) {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
+}
 
+extension AppDelegate: CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didVisit visit: CLVisit) {
+        // create CLLocation from the coordinates of CLVisit
+        let clLocation = CLLocation(latitude: visit.coordinate.latitude, longitude: visit.coordinate.longitude)
+        // Get location description
+        //Here, you ask geoCoder to get placemarks from the location. The placemarks contain a bunch of useful information about the coordinates, including their addresses. You then create a description string out of the first placemark. Once you have the description string, you call newVisitReceived(_:description:).
+        AppDelegate.geoCoder.reverseGeocodeLocation(clLocation) { placemarks, _ in
+            if let place = placemarks?.first {
+                let description = "\(place)"
+                self.newVisitReceived(visit, description: description)
+            }
+        }
 
+    }
+    
+    func newVisitReceived(_ visit: CLVisit, description: String) {
+        let location = Location(visit: visit, descriptionString: description)
+        //Setting up the notification content
+        let content = UNMutableNotificationContent()
+        content.title = "New entry"
+        content.body = location.description
+        content.sound = .default()
+        //Create a one second long trigger and notification request with that trigger.
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(identifier: location.dateString, content: content, trigger: trigger)
+        //Schedule the notification by adding the request to notification center.
+        center.add(request, withCompletionHandler: nil)
+
+        // Save location to disk
+    }
+    
+    
 }
 
